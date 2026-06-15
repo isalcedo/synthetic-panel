@@ -1,0 +1,17 @@
+# Study artifacts (generated per run in the workspace, not in this repo)
+runs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+
+# Cursor workspace outputs (canvases live in project canvases/, not here)
+canvases/
