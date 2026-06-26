@@ -6,12 +6,15 @@ aggregate responses statistically, and deliver an interactive canvas dashboard.
 
 ## What it does
 
-1. **Intake** — interactive questions (idea, audience, N, runs, persona models).
-2. **Personas** — auto-generated roster with demographics, OCEAN traits, backstory.
-3. **Parallel panel** — one subagent per persona, isolated context, web grounding.
-4. **Validate & repair** — tolerant JSON parsing, re-dispatch failures.
-5. **Aggregate** — distributions, crosstabs, second-order realism diagnostics.
-6. **Canvas** — dashboard with charts, themes, and trust panel.
+1. **Intake** — interactive questions (idea, audience, N, runs, persona models,
+   optional market externalities — user-provided or orchestrator-researched).
+2. **Market context** (optional) — canonical brief of politics, economy, or news
+   shaping persona decisions; written before persona generation.
+3. **Personas** — auto-generated roster with demographics, OCEAN traits, backstory.
+4. **Parallel panel** — one subagent per persona, isolated context, web grounding.
+5. **Validate & repair** — tolerant JSON parsing, re-dispatch failures.
+6. **Aggregate** — distributions, crosstabs, second-order realism diagnostics.
+7. **Canvas** — dashboard with charts, themes, and trust panel.
 
 Invoke in Cursor: `/synthetic-panel`
 
@@ -20,6 +23,7 @@ Invoke in Cursor: `/synthetic-panel`
 ```
 synthetic-panel/
 ├── SKILL.md              # Orchestrator workflow (read by Cursor)
+├── survey-design.md      # Mom Test survey methodology for idea validation
 ├── reference.md          # Schemas, persona prompt template
 ├── scripts/
 │   ├── aggregate.py      # Statistics (stdlib only)

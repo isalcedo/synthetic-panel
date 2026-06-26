@@ -268,6 +268,7 @@ def aggregate(run_dir):
             "input": study.get("input"),
             "audience": study.get("audience"),
             "runs": study.get("runs", 1),
+            "market_context": study.get("market_context"),
         },
         "summary": {
             "n_personas": len(personas),

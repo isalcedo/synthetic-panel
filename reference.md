@@ -3,6 +3,9 @@
 Templates and data contracts for the orchestrator. Read this when generating
 personas, dispatching persona subagents, or wiring up aggregation.
 
+For survey design rules (blocks, hypotheses, bias avoidance), read
+[survey-design.md](survey-design.md) first.
+
 ## 1. Persona generation
 
 From the audience description and `N`, generate a roster that is diverse along
@@ -10,6 +13,12 @@ demographics and psychographics. Avoid clones: vary age, location, income,
 occupation, and the Big Five (OCEAN) traits. Each persona gets a first-person
 backstory (silicon-sampling style) that encodes its context and biases, plus
 seed search queries it would plausibly run.
+
+When `study.market_context.mode` is not `none`, the brief in
+`study.market_context.summary` is a **shared factual layer** — the same macro
+reality for every persona. Each `backstory` must reflect how **this person**
+interprets and weights those facts (salience differs by age, occupation, income,
+and OCEAN). Do not give each persona a different macro reality.
 
 Model assignment:
 - Single model: every persona gets the same `model`.
@@ -30,10 +39,67 @@ A agreeableness, N neuroticism).
     "input": "One-line description of the idea/question being evaluated",
     "audience": "Free-text audience description",
     "runs": 1,
+    "market_context": {
+      "mode": "none",
+      "scope": "Argentina",
+      "window": "last 2 months",
+      "focus": ["political", "economic"],
+      "summary": "3–8 paragraphs: shared facts, dates, uncertainties",
+      "sources": ["https://..."],
+      "user_provided": false
+    },
+    "hypotheses": [
+      {"id": "h1", "statement": "The problem exists and is frequent for this profile"},
+      {"id": "h2", "statement": "People already spend time/money solving it today"},
+      {"id": "h3", "statement": "They would pay $Y for a better solution"}
+    ],
     "questions": [
-      {"id": "q1", "text": "How likely are you to use this?", "type": "scale", "options": [1, 2, 3, 4, 5]},
-      {"id": "q2", "text": "Which pricing tier fits you?", "type": "single", "options": ["Free", "Pro", "Team"]},
-      {"id": "q3", "text": "What would stop you from buying?", "type": "open"}
+      {
+        "id": "q0a",
+        "text": "What is your primary role?",
+        "type": "single",
+        "options": ["Individual contributor", "Manager", "Founder", "Other"],
+        "block": "filter",
+        "hypothesis": "h1"
+      },
+      {
+        "id": "q1",
+        "text": "When did you last face [problem]? What did you do?",
+        "type": "open",
+        "block": "problem",
+        "hypothesis": "h1"
+      },
+      {
+        "id": "q2",
+        "text": "In the last 6 months, how much have you spent (money or paid tools) on solving this?",
+        "type": "single",
+        "options": ["$0", "$1–50", "$51–200", "$200+", "Prefer not to say"],
+        "block": "current_behavior",
+        "hypothesis": "h2"
+      },
+      {
+        "id": "q3",
+        "text": "Have you actively searched for a solution in the last 3 months?",
+        "type": "single",
+        "options": ["Yes, and evaluated options", "Yes, but only browsed", "No"],
+        "block": "willingness_to_change",
+        "hypothesis": "h2"
+      },
+      {
+        "id": "q4",
+        "text": "[Brief concept]. What would make you NOT use or pay for this?",
+        "type": "open",
+        "block": "concept",
+        "hypothesis": "h3"
+      },
+      {
+        "id": "q5",
+        "text": "At what monthly price would this start to feel expensive?",
+        "type": "single",
+        "options": ["Under $10", "$10–25", "$25–50", "$50–100", "Over $100"],
+        "block": "pricing",
+        "hypothesis": "h3"
+      }
     ]
   },
   "personas": [
@@ -52,9 +118,21 @@ A agreeableness, N neuroticism).
 }
 ```
 
+`study.market_context` is optional. Use `"mode": "none"` or omit the object when
+no market externality context applies. `mode` values: `none`, `user`,
+`research`. Set `user_provided: true` when `mode` is `user`. `focus` is an array
+of topic tags (`political`, `economic`, `regulatory`, `social`, `all`).
+
 Question `type` values: `scale` (numeric), `single` (one option), `multi`
 (several options), `open` (free text). Closed types feed the statistics;
 `open` feeds the qualitative synthesis.
+
+Question `block` values (from survey-design.md): `filter`, `problem`,
+`current_behavior`, `willingness_to_change`, `concept`, `pricing`.
+
+Every question must have `hypothesis` pointing to a `study.hypotheses[].id`.
+Maximum 12 questions total. Do not reveal the product/solution before `concept`
+block questions.
 
 ## 3. Persona subagent prompt template
 
@@ -74,6 +152,10 @@ PERSONA
 - Personality (OCEAN 0-1): [ocean]
 - Background: [backstory]
 
+MARKET CONTEXT (shared environment — same facts for everyone; omit this block when mode is none)
+[study.market_context.summary]
+You live in this environment. Let your background determine which of these factors matter most to you.
+
 TASK
 React, as this person, to the following:
 [input]
@@ -91,8 +173,10 @@ AUTONOMY (critical)
 
 STEPS
 1. Browse the web from YOUR perspective. Run searches a person like you would run
-   (start from these: [seed_queries]). Read what is relevant to you and form your
-   own opinion. Let your background and biases shape what you trust and prefer.
+   (start from these: [seed_queries]). Focus on the product/survey topic and what
+   matters to you — do not re-research the full macro brief from scratch; you
+   already know the shared market context above. Read what is relevant and form
+   your own opinion. Let your background and biases shape what you trust and prefer.
 2. Decide your answers honestly as this person, including doubts and dealbreakers.
 
 OUTPUT (critical)
@@ -133,7 +217,8 @@ Dispatch settings: `subagent_type: generalPurpose`, `run_in_background: true`,
 `model: <persona.model>` (omit if session-default). Launch in batches of ~8-12.
 Substitute `[absolute_response_path]` with the absolute path to
 `runs/<timestamp>/responses/<persona_id>.json` and `[closed_question_ids]` with
-the list of closed question ids. For multi-run studies, point each run at a
+the list of closed question ids. Omit the MARKET CONTEXT block when
+`study.market_context.mode` is `none`. For multi-run studies, point each run at a
 distinct path and set `"run": <n>` inside the JSON.
 
 ## 4. Response JSON schema (what each subagent returns)
